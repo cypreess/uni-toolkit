@@ -6,8 +6,8 @@ from uni.helpers import import_path
 
 
 class UniRunner(metaclass=ABCMeta):
-    ENVIRONMENT_VAR_NAME = 'UNI_ENVIRONMENT'
-    ALGORITHM_VAR_NAME = 'UNI_ALGORITHM'
+    ENVIRONMENT_VAR_NAME = 'UNI_ENVIRONMENT_PYTHON_PATH'
+    ALGORITHM_VAR_NAME = 'UNI_ALGORITHM_PYTHON_PATH'
 
     def __init__(self, environment=None, algorithm=None):
         self._logger = logging.getLogger(self.__class__.__name__)
