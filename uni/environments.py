@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-
+from uni import monitor
 
 class UniEnvironment(metaclass=ABCMeta):
     @abstractmethod
@@ -38,6 +38,7 @@ class OpenAiGymUniEnvironment(UniEnvironment):
 
         self.pre_init_hook()
         self._env = gym.make(self.OPEN_AI_GYM_ENV_NAME)
+        self._env = monitor.UniMonitor(self._env, '/tmp/uni-monitor', force=True)
 
     def step(self, action):
         return self._env.step(action)
