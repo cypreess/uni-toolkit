@@ -1,8 +1,10 @@
+import logging
+import os
+import subprocess
+
+from gym import error
 from gym import wrappers
 from gym.monitoring import video_recorder
-import subprocess
-from gym import error
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,7 @@ class UniMonitor(wrappers.Monitor):
         # Start recording the next video.
         self.video_recorder = UniStreamRecorder(
             env=self.env,
+            base_path=os.path.join(self.directory, '{}.video.{}.video{:06}'.format(self.file_prefix, self.file_infix, self.episode_id)),
             metadata={'episode_id': self.episode_id},
             enabled=self._video_enabled(),
         )
