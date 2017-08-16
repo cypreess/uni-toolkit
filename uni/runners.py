@@ -55,7 +55,6 @@ class UniRunner(metaclass=ABCMeta):
                 observation, reward, done, info = self.environment.step(action)
                 score += reward
                 step += 1
-                self.environment._env.render("human")
                 if done:
                     self.logger.info("score=%0.2f in %i frames" % (score, step))
                     break
