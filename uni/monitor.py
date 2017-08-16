@@ -25,7 +25,7 @@ class UniMonitor(wrappers.Monitor):
     def _reset_video_recorder(self):
         # Close any existing video recorder
         if self.video_recorder:
-            self._close_video_recorder()
+            return
 
         # Start recording the next video.
         self.video_recorder = UniStreamRecorder(
