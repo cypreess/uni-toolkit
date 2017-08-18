@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from uni import monitor
 
+
 class UniEnvironment(metaclass=ABCMeta):
     @abstractmethod
     def __init__(self):
@@ -24,7 +25,6 @@ class UniEnvironment(metaclass=ABCMeta):
     @abstractmethod
     def observation_space(self):
         pass
-
 
 
 class OpenAiGymUniEnvironment(UniEnvironment):
@@ -53,5 +53,3 @@ class OpenAiGymUniEnvironment(UniEnvironment):
 
     def reset(self):
         return self._env.reset()
-
-
