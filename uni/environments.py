@@ -35,6 +35,14 @@ class OpenAiGymUniEnvironment(UniEnvironment):
 
     def __init__(self):
         import gym
+        import logging
+        import sys
+
+        # Change OpenAI gym standard logging to ERR
+
+        gym.undo_logger_setup()
+        logger = logging.getLogger()
+        logger.addHandler(logging.StreamHandler(sys.stdout))
 
         self.pre_init_hook()
         self._env = gym.make(self.OPEN_AI_GYM_ENV_NAME)
