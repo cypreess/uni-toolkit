@@ -30,6 +30,10 @@ class UniEnvironment(metaclass=ABCMeta):
     def observation_space(self):
         pass
 
+    @abstractmethod
+    def render(self, *args, **kwargs):
+        pass
+
 
 class OpenAiGymUniEnvironment(UniEnvironment):
     OPEN_AI_GYM_ENV_NAME = None
@@ -70,3 +74,6 @@ class OpenAiGymUniEnvironment(UniEnvironment):
 
     def reset(self):
         return self.env.reset()
+
+    def render(self, *args, **kwargs):
+        return self.env.render(*args, **kwargs)

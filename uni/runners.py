@@ -266,7 +266,7 @@ class UniRunner:
             self.algorithm.pre_episode(episode)
 
             for step in range(1, max_steps + 1):
-                action = self.algorithm.action(episode, step, observation)
+                action = self.algorithm.action_train(episode, step, observation)
                 new_observation, reward, is_done, debug = self.environment.step(action)
                 episodes_rewards[-1] += reward
                 self.algorithm.post_step(episode, step, action, observation, new_observation, reward, is_done, debug)
@@ -276,28 +276,37 @@ class UniRunner:
                     self.logger.info('Episode #%d is done' % episode)
                     break
 
+            self.algorithm.post_episode(episode)
+
             if self.should_save_model(episodes_rewards):
                 self.model_save(episodes_rewards[-1])
-
-            self.algorithm.post_episode(episode)
 
     def run_model(self):
         """
         Runs simulation in demo mode which just reads built before model and use it
         """
-        while 1:
-            step = 0
-            score = 0
-            observation = self.environment.reset()
 
-            while 1:
-                action = self.algorithm.action(observation)
-                observation, reward, done, info = self.environment.step(action)
-                score += reward
+        self.algorithm.load(directory=self.parameter('UNI_OUTPUT_DIR'))
+
+        episode = 0
+
+        while True:
+            episode += 1
+            step = 0
+            is_done = False
+            observation = self.environment.reset()
+            episode_reward = 0
+
+            while not is_done:
                 step += 1
-                if done:
-                    self.logger.info("score=%0.2f in %i frames" % (score, step))
-                    break
+                self.environment.render()
+
+                action = self.algorithm.action(episode, step, observation)
+
+                observation, reward, is_done, debug = self.environment.step(action)
+                episode_reward += reward
+
+            self.logger.info("Episode #{episode} reward {reward}".format(episode=episode, reward=episode_reward))
 
     def should_save_model(self, episodes_rewards):
         """

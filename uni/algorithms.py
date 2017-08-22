@@ -15,19 +15,26 @@ class UniAlgorithm(metaclass=ABCMeta):
     def name(self):
         return self.__class__.__name__ if self.NAME is None else self.NAME
 
-    @abstractmethod
-    def action(self, episode, step, observation):
-        pass
-
-    def post_step(self, episode, step, action, observation, new_observation, reward, is_done, debug):
-        """Run after environment step"""
-        pass
 
     def prepare(self):
+        """Set up some additional run-time properties for model"""
         pass
 
     def pre_episode(self, episode):
         """Method runs on the beginning of each episode just after environment had been reset"""
+        pass
+
+    @abstractmethod
+    def action(self, episode, step, observation):
+        """Perform action in environment based on observation in given episode step"""
+        pass
+
+    def action_train(self, episode, step, observation):
+        """Specific version of action method that is used for training, by default is same as main action method"""
+        return self.action(episode, step, observation)
+
+    def post_step(self, episode, step, action, observation, new_observation, reward, is_done, debug):
+        """Run after environment step"""
         pass
 
     def post_episode(self, episode):
@@ -37,4 +44,9 @@ class UniAlgorithm(metaclass=ABCMeta):
     @abstractmethod
     def save(self, directory):
         """Should dump the model to any number of files to provided directory"""
+        pass
+
+    @abstractmethod
+    def load(self, directory):
+        """Should load the model from any number of files to provided directory"""
         pass
