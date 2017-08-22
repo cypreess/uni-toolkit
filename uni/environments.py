@@ -1,11 +1,14 @@
 from abc import ABCMeta, abstractmethod
+
 from uni import monitor
 
 
 class UniEnvironment(metaclass=ABCMeta):
-    @abstractmethod
-    def __init__(self):
-        pass
+    PARAMETERS = {}
+    PARAMETERS_CLEANERS = {}
+
+    def __init__(self, runner):
+        self.runner = runner
 
     @abstractmethod
     def step(self, action):
@@ -19,6 +22,7 @@ class UniEnvironment(metaclass=ABCMeta):
     @property
     @abstractmethod
     def action_space(self):
+        """Return integer with action space size"""
         pass
 
     @property
@@ -33,31 +37,36 @@ class OpenAiGymUniEnvironment(UniEnvironment):
     def pre_init_hook(self):
         pass
 
-    def __init__(self):
-        import gym
-        import logging
-        import sys
+    def __init__(self, runner):
+        self._env = None
+        super().__init__(runner)
 
-        # Change OpenAI gym standard logging to ERR
+    @property
+    def env(self):
+        if self._env is None:
+            import gym
 
-        gym.undo_logger_setup()
-        logger = logging.getLogger()
-        logger.addHandler(logging.StreamHandler(sys.stdout))
+            gym.undo_logger_setup()  # Get rid of gym logging
 
-        self.pre_init_hook()
-        self._env = gym.make(self.OPEN_AI_GYM_ENV_NAME)
-        self._env = monitor.UniMonitor(self._env, '/tmp/uni-monitor', force=True)
+            # logger = logging.getLogger()
+            # logger.addHandler(logging.StreamHandler(sys.stdout))
+
+            self.pre_init_hook()
+            self._env = gym.make(self.OPEN_AI_GYM_ENV_NAME)
+            self._env = monitor.UniMonitor(self._env, '/tmp/uni-monitor', force=True)
+
+        return self._env
 
     def step(self, action):
-        return self._env.step(action)
+        return self.env.step(action)
 
     @property
     def action_space(self):
-        return self._env.action_space
+        return self.env.action_space.n
 
     @property
     def observation_space(self):
-        return self._env.observation_space
+        return self.env.observation_space.shape
 
     def reset(self):
-        return self._env.reset()
+        return self.env.reset()
