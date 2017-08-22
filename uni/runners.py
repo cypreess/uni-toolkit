@@ -125,6 +125,9 @@ class UniRunner:
     def __init__(self, environment=None, algorithm=None, run_mode='train', parameters=None):
         assert parameters is None or type(parameters) is dict, "parameters must be dict or None"
 
+        if parameters is None:
+            parameters = {}
+
         self.PARAMETERS_OVERRIDDEN.update(parameters)
 
         self._logger = None
