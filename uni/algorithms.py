@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod
 
 
@@ -15,10 +16,13 @@ class UniAlgorithm(metaclass=ABCMeta):
     def name(self):
         return self.__class__.__name__ if self.NAME is None else self.NAME
 
-
     def prepare(self):
         """Set up some additional run-time properties for model"""
-        pass
+
+        # Ensure that model output directory exists
+        if not os.path.exists(self.runner.parameter('UNI_OUTPUT_DIR')):
+            self.runner.logger.warning('Creating directory {dir}'.format(dir=self.runner.parameter('UNI_OUTPUT_DIR')))
+            os.makedirs(self.runner.parameter('UNI_OUTPUT_DIR'))
 
     def pre_episode(self, episode):
         """Method runs on the beginning of each episode just after environment had been reset"""
