@@ -11,6 +11,11 @@ class UniConfigurationError(Exception):
         self.message = message
 
 
+class UniFatalError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
 class UniRunner:
     # To adjust verbosity of logging please override those class attributes
     LOG_LEVEL = logging.INFO
@@ -240,9 +245,14 @@ class UniRunner:
                 self.run_training()
             else:
                 raise UniConfigurationError('Unknown run mode "%s"' % self.run_mode)
+
+        except UniFatalError as e:
+            self.logger.error(e.message)
+            sys.exit(1)
+
         except UniConfigurationError as e:
             self.logger.error("Bad configuration! {problem}".format(problem=e.message))
-            sys.exit(1)
+            sys.exit(2)
 
     def run_training(self, episodes=None, max_steps=None):
         """
@@ -327,3 +337,6 @@ class UniRunner:
         self._best_saved_episode_reward = episode_reward
         self._model_was_saved = True
         self.algorithm.save(directory=self.parameter('UNI_OUTPUT_DIR'))
+
+        # def __getitem__(self, item):
+        #     return self.parameter(item)
