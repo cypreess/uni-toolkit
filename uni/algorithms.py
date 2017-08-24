@@ -1,13 +1,16 @@
 import os
 from abc import ABCMeta, abstractmethod
 
+from uni.helpers import ParameterReaderMixin
 
-class UniAlgorithm(metaclass=ABCMeta):
+
+class UniAlgorithm(ParameterReaderMixin, metaclass=ABCMeta):
     NAME = None
     PARAMETERS = {}
     PARAMETERS_CLEANERS = {}
 
     def __init__(self, runner, observation_space, action_space):
+        self.PARAMETERS = self.read_parameters()
         self.runner = runner
         self.observation_space = observation_space
         self.action_space = action_space

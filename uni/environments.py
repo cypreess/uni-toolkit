@@ -1,13 +1,15 @@
 from abc import ABCMeta, abstractmethod
 
 from uni import monitor
+from uni.helpers import ParameterReaderMixin
 
 
-class UniEnvironment(metaclass=ABCMeta):
+class UniEnvironment(ParameterReaderMixin, metaclass=ABCMeta):
     PARAMETERS = {}
     PARAMETERS_CLEANERS = {}
 
     def __init__(self, runner):
+        self.PARAMETERS = self.read_parameters()
         self.runner = runner
 
     @abstractmethod

@@ -3,17 +3,8 @@ import logging
 import os
 import sys
 
+from uni.exceptions import UniConfigurationError, UniFatalError
 from uni.helpers import import_path
-
-
-class UniConfigurationError(Exception):
-    def __init__(self, message):
-        self.message = message
-
-
-class UniFatalError(Exception):
-    def __init__(self, message):
-        self.message = message
 
 
 class UniRunner:

@@ -1,4 +1,11 @@
 import importlib
+import inspect
+import json
+
+import os
+from pathlib import Path
+
+from uni.exceptions import UniFatalError
 
 
 def import_path(path):
@@ -21,4 +28,20 @@ def type_or_none(t):
         if not value:
             return None
         return t(value)
+
     return _
+
+
+class ParameterReaderMixin:
+    def read_parameters(self):
+        """
+        Reading default parameters from provided file
+        """
+        base_dir = os.path.dirname(inspect.getfile(self.__class__))
+        parameters_file = os.path.join(base_dir, 'parameters.json')
+        if Path(parameters_file).is_file():
+            try:
+                with open(parameters_file) as f:
+                    return json.load(f)
+            except json.decoder.JSONDecodeError as e:
+                raise UniFatalError("Cannot parse parameters file (%s): %s" % (parameters_file, e))
