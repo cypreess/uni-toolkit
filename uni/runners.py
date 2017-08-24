@@ -22,6 +22,8 @@ class UniRunner:
     # it will override any given environment variable
     PARAMETERS = {
         'UNI_OUTPUT_DIR': '/tmp/uni-models/',
+        'CPU_NUMBER': 1,
+        'EPISODES': 100,
     }
     PARAMETERS_OVERRIDDEN = {}
     PARAMETERS_CLEANERS = {
