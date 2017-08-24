@@ -51,6 +51,9 @@ class UniRunner:
                             action='append', required=False,
                             help='set specific parameter name')
 
+        parser.add_argument('-r', '--render', default=False, action='store_true',
+                            help='enable environment rendering')
+
         return parser
 
     @classmethod
@@ -67,7 +70,7 @@ class UniRunner:
         args = parser.parse_args()
 
         return cls(environment=args.environment, algorithm=args.algorithm, run_mode=args.mode,
-                   parameters=dict(args.set))
+                   parameters=dict(args.set), render=args.render)
 
     # Set up propper logging rules
 
@@ -118,7 +121,7 @@ class UniRunner:
 
     # Runner object
 
-    def __init__(self, environment=None, algorithm=None, run_mode='train', parameters=None):
+    def __init__(self, environment=None, algorithm=None, run_mode='train', parameters=None, render=False):
         assert parameters is None or type(parameters) is dict, "parameters must be dict or None"
 
         if parameters is not None:
@@ -135,6 +138,8 @@ class UniRunner:
 
         self._model_was_saved = False
         self._best_saved_episode_reward = None  # used for determining the last best saved model
+
+        self.render = render
 
     def parameter(self, name):
         """
@@ -301,7 +306,9 @@ class UniRunner:
 
             while not is_done:
                 step += 1
-                self.environment.render()
+
+                if self.render:
+                    self.environment.render()
 
                 action = self.algorithm.action(episode, step, observation)
 

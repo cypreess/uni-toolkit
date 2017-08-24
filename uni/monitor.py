@@ -53,6 +53,28 @@ class UniStreamRecorder(video_recorder.VideoRecorder):
         else:
             self.empty = False
 
+    def capture_frame(self):
+        """Render the given `env` and add the resulting frame to the video."""
+        if not self.functional: return
+
+        render_mode = 'ansi' if self.ansi_mode else 'rgb_array'
+        frame = self.env.render(mode=render_mode)
+
+        if frame is None:
+            if self._async:
+                return
+            else:
+                # Indicates a bug in the environment: don't want to raise
+                # an error here.
+                logger.warn('Env returned None on render(). Disabling further rendering for video recorder by marking as disabled: path=%s metadata_path=%s', self.path, self.metadata_path)
+                self.broken = True
+        else:
+            self.last_frame = frame
+            if self.ansi_mode:
+                self._encode_ansi_frame(frame)
+            else:
+                self._encode_image_frame(frame)
+
 
 class UniImageEncoder(video_recorder.ImageEncoder):
     def __init__(self, output_path, frame_shape, frames_per_sec):
