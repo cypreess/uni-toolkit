@@ -112,7 +112,7 @@ class UniImageEncoder(video_recorder.ImageEncoder):
                         '-pix_fmt', 'yuv420p',
                         # '-c', 'copy',
                         '-bsf:v', 'h264_mp4toannexb',
-                        '-f', 'mpegts', 'http://127.0.0.1:8000/publish/uni',
+                        '-f', 'mpegts', 'http://127.0.0.1/publish/uni',
                         )
 
         self.proc = subprocess.Popen(self.cmdline, stdin=subprocess.PIPE)
