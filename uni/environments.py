@@ -61,7 +61,7 @@ class OpenAiGymUniEnvironment(UniEnvironment):
             self._env = gym.make(self.OPEN_AI_GYM_ENV_NAME)
             if self.runner.run_mode == 'run':
                 # We only run rendering to video in "run" mode (not training mode)
-                self._env = monitor.UniMonitor(self._env, '/tmp/uni-monitor', force=True)
+                self._env = monitor.UniMonitor(self._env)
 
         return self._env
 
