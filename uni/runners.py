@@ -2,6 +2,8 @@ import argparse
 import logging
 import os
 import sys
+import tarfile
+import tempfile
 from urllib.parse import urljoin
 
 import requests
@@ -245,6 +247,8 @@ class UniRunner:
                 self.run_model()
             elif self.run_mode == 'train':
                 self.run_training()
+            elif self.run_mode == 'info':
+                self.run_info()
             else:
                 raise UniConfigurationError('Unknown run mode "%s"' % self.run_mode)
 
@@ -255,6 +259,10 @@ class UniRunner:
         except UniConfigurationError as e:
             self.logger.error("Bad configuration! {problem}".format(problem=e.message))
             sys.exit(2)
+
+    def run_info(self):
+        """Prints custom string to be shown in visualisation window"""
+        print(self.name)
 
     def run_training(self, episodes=None, max_steps=None):
         """
@@ -335,12 +343,34 @@ class UniRunner:
         """
         Perform model save
         """
+        endpoint = urljoin(self['UNI_API'], '/runs/%s/models/' % self['UNI_RUN_ID'])
+        headers = {'Authorization': 'token %s' % self['UNI_API_TOKEN']}
+        response = requests.post(endpoint, data={'reward': episode_reward}, headers=headers)
+        if response.status_code == 201:
+            model_data = response.json()
+            self.logger.info('Saving model with episode total reward {reward} to {directory}'.format(
+                reward=episode_reward, directory=self.parameter('UNI_OUTPUT_DIR')))
+            self._best_saved_episode_reward = episode_reward
+            self._model_was_saved = True
+            self.algorithm.save(directory=self.parameter('UNI_OUTPUT_DIR'))
 
-        self.logger.info('Saving model with episode total reward {reward} to {directory}'.format(
-            reward=episode_reward, directory=self.parameter('UNI_OUTPUT_DIR')))
-        self._best_saved_episode_reward = episode_reward
-        self._model_was_saved = True
-        self.algorithm.save(directory=self.parameter('UNI_OUTPUT_DIR'))
+            self.logger.info("Uploading model...")
+            with tempfile.TemporaryFile() as temp_archive:
+                with tarfile.open(fileobj=temp_archive, mode="w:gz") as temp_tar_archive:
+                    temp_tar_archive.add(self['UNI_OUTPUT_DIR'], arcname='.')
+                    temp_archive.seek(0)
+                    response = requests.put(model_data['upload_url'], files={'file': temp_archive})
+            if response.status_code == 200:
+                endpoint = urljoin(self['UNI_API'], '/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']))
+                requests.patch(endpoint, data={'uploaded': True}, headers=headers)
+                self.logger.info("Model successfully uploaded...")
+            else:
+                self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
+        elif response.status_code == 204:
+            self.logger.info(
+                'Skipping model save because there is already better model reward than %d' % episode_reward)
+        else:
+            self.logger.error('Problem with connecting to Uni API: %s %s' % (response, response.text))
 
     def __getitem__(self, item):
         return self.parameter(item)
