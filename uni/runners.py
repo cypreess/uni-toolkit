@@ -2,6 +2,9 @@ import argparse
 import logging
 import os
 import sys
+from urllib.parse import urljoin
+
+import requests
 
 from uni.exceptions import UniConfigurationError, UniFatalError
 from uni.helpers import import_path
@@ -339,5 +342,5 @@ class UniRunner:
         self._model_was_saved = True
         self.algorithm.save(directory=self.parameter('UNI_OUTPUT_DIR'))
 
-        # def __getitem__(self, item):
-        #     return self.parameter(item)
+    def __getitem__(self, item):
+        return self.parameter(item)
