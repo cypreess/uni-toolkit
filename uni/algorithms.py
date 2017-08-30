@@ -23,9 +23,9 @@ class UniAlgorithm(ParameterReaderMixin, metaclass=ABCMeta):
         """Set up some additional run-time properties for model"""
 
         # Ensure that model output directory exists
-        if not os.path.exists(self.runner.parameter('UNI_OUTPUT_DIR')):
-            self.runner.logger.warning('Creating directory {dir}'.format(dir=self.runner.parameter('UNI_OUTPUT_DIR')))
-            os.makedirs(self.runner.parameter('UNI_OUTPUT_DIR'))
+        if not os.path.exists(self.runner.parameter('UNI_MODEL_DIR')):
+            self.runner.logger.warning('Creating directory {dir}'.format(dir=self.runner.parameter('UNI_MODEL_DIR')))
+            os.makedirs(self.runner.parameter('UNI_MODEL_DIR'))
 
     def pre_episode(self, episode):
         """Method runs on the beginning of each episode just after environment had been reset"""

@@ -26,7 +26,7 @@ class UniRunner:
     # this is used only for parameters set using `--set` argument on command line
     # it will override any given environment variable
     PARAMETERS = {
-        'UNI_OUTPUT_DIR': '/tmp/uni-models/',
+        'UNI_MODEL_DIR': '/tmp/uni-models/',
         'CPU_NUMBER': 1,
         'EPISODES': 100,
     }
@@ -306,7 +306,7 @@ class UniRunner:
         Runs simulation in demo mode which just reads built before model and use it
         """
 
-        self.algorithm.load(directory=self.parameter('UNI_OUTPUT_DIR'))
+        self.algorithm.load(directory=self.parameter('UNI_MODEL_DIR'))
 
         episode = 0
 
@@ -349,15 +349,15 @@ class UniRunner:
         if response.status_code == 201:
             model_data = response.json()
             self.logger.info('Saving model with episode total reward {reward} to {directory}'.format(
-                reward=episode_reward, directory=self.parameter('UNI_OUTPUT_DIR')))
+                reward=episode_reward, directory=self.parameter('UNI_MODEL_DIR')))
             self._best_saved_episode_reward = episode_reward
             self._model_was_saved = True
-            self.algorithm.save(directory=self.parameter('UNI_OUTPUT_DIR'))
+            self.algorithm.save(directory=self.parameter('UNI_MODEL_DIR'))
 
             self.logger.info("Uploading model...")
             with tempfile.TemporaryFile() as temp_archive:
                 with tarfile.open(fileobj=temp_archive, mode="w:gz") as temp_tar_archive:
-                    temp_tar_archive.add(self['UNI_OUTPUT_DIR'], arcname='.')
+                    temp_tar_archive.add(self['UNI_MODEL_DIR'], arcname='.')
                     temp_archive.seek(0)
                     response = requests.put(model_data['upload_url'], data=temp_archive)
             if response.status_code == 200:
