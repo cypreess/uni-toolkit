@@ -343,7 +343,7 @@ class UniRunner:
         """
         Perform model save
         """
-        endpoint = urljoin(self['UNI_API'], '/runs/%s/models/' % self['UNI_RUN_ID'])
+        endpoint = urljoin(self['UNI_API_URL'], '/runs/%s/models/' % self['UNI_RUN_ID'])
         headers = {'Authorization': 'token %s' % self['UNI_API_TOKEN']}
         response = requests.post(endpoint, data={'reward': episode_reward}, headers=headers)
         if response.status_code == 201:
