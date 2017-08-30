@@ -45,3 +45,4 @@ class ParameterReaderMixin:
                     return json.load(f)
             except json.decoder.JSONDecodeError as e:
                 raise UniFatalError("Cannot parse parameters file (%s): %s" % (parameters_file, e))
+        return {}
