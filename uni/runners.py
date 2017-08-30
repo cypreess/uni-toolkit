@@ -361,7 +361,7 @@ class UniRunner:
                     temp_archive.seek(0)
                     response = requests.put(model_data['upload_url'], files={'file': temp_archive})
             if response.status_code == 200:
-                endpoint = urljoin(self['UNI_API'], '/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']))
+                endpoint = urljoin(self['UNI_API_URL'], '/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']))
                 requests.patch(endpoint, data={'uploaded': True}, headers=headers)
                 self.logger.info("Model successfully uploaded...")
             else:
