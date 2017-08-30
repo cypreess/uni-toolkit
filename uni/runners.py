@@ -367,6 +367,7 @@ class UniRunner:
             else:
                 self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
         elif response.status_code == 204:
+            self._best_saved_episode_reward = episode_reward
             self.logger.info(
                 'Skipping model save because there is already better model reward than %d' % episode_reward)
         else:
