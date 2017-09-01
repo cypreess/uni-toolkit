@@ -357,9 +357,9 @@ class UniRunner:
             self.logger.info("Uploading model...")
             with tempfile.TemporaryFile() as temp_archive:
                 with tarfile.open(fileobj=temp_archive, mode="w:gz") as temp_tar_archive:
-                    temp_tar_archive.add(self['UNI_MODEL_DIR'], arcname='.')
-                    temp_archive.seek(0)
-                    response = requests.put(model_data['upload_url'], data=temp_archive.read())
+                    temp_tar_archive.add(self['UNI_MODEL_DIR'], arcname='')
+                temp_archive.seek(0)
+                response = requests.put(model_data['upload_url'], data=temp_archive.read())
             if response.status_code == 200:
                 endpoint = urljoin(self['UNI_API_URL'], '/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']))
                 requests.patch(endpoint, data={'uploaded': True}, headers=headers)
