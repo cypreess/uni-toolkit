@@ -337,7 +337,7 @@ class UniRunner:
 
     def get_model_score(self, episodes_rewards):
         """Dummy scoring; last N-th mean reward"""
-        return round(np.mean(episodes_rewards[- self['MODEL_SAVE_BEST_LAST_MEAN'] - 1:-1]), 1)
+        return round(np.mean(episodes_rewards[-self['MODEL_SAVE_BEST_LAST_MEAN']:]), 1)
 
     def should_save_model(self, model_score):
         """
