@@ -6,6 +6,7 @@ import tarfile
 import tempfile
 from urllib.parse import urljoin
 
+import numpy as np
 import requests
 
 from uni.exceptions import UniConfigurationError, UniFatalError
@@ -29,11 +30,13 @@ class UniRunner:
         'UNI_MODEL_DIR': '/tmp/uni-models/',
         'CPU_NUMBER': 1,
         'EPISODES': 100,
+        'MODEL_SAVE_BEST_LAST_MEAN': 100,
     }
     PARAMETERS_OVERRIDDEN = {}
     PARAMETERS_CLEANERS = {
         'EPISODES': int,
         'CPU_NUMBER': int,
+        'MODEL_SAVE_BEST_LAST_MEAN': int,
     }
 
     # Prepare runner object from shell arguments
@@ -144,7 +147,7 @@ class UniRunner:
         self.algorithm_path = algorithm or os.environ.get(self.ALGORITHM_VAR_NAME)
 
         self._model_was_saved = False
-        self._best_saved_episode_reward = None  # used for determining the last best saved model
+        self._best_last_saved_model_score = None  # used for determining the last best saved model
 
         self.render = render
 
@@ -298,8 +301,10 @@ class UniRunner:
 
             self.algorithm.post_episode(episode)
 
-            if self.should_save_model(episodes_rewards):
-                self.model_save(episodes_rewards[-1])
+            model_score = self.get_model_score(episodes_rewards)
+
+            if self.should_save_model(model_score):
+                self.model_save(model_score)
 
     def run_model(self):
         """
@@ -330,27 +335,29 @@ class UniRunner:
 
             self.logger.info("Episode #{episode} reward {reward}".format(episode=episode, reward=episode_reward))
 
-    def should_save_model(self, episodes_rewards):
+    def get_model_score(self, episodes_rewards):
+        """Dummy scoring; last N-th mean reward"""
+        return round(np.mean(episodes_rewards[- self['MODEL_SAVE_BEST_LAST_MEAN'] - 1:-1]), 1)
+
+    def should_save_model(self, model_score):
         """
         Make decision if model is good enough to be saved as intermediate outcome policy
-
-        UniRunner implements dummy policy that every model with higher total reward is saved
         """
 
-        return self._best_saved_episode_reward is None or episodes_rewards[-1] > self._best_saved_episode_reward
+        return self._best_last_saved_model_score is None or model_score > self._best_last_saved_model_score
 
-    def model_save(self, episode_reward):
+    def model_save(self, model_score):
         """
         Perform model save
         """
         endpoint = urljoin(self['UNI_API_URL'], '/runs/%s/models/' % self['UNI_RUN_ID'])
         headers = {'Authorization': 'token %s' % self['UNI_API_TOKEN']}
-        response = requests.post(endpoint, data={'reward': episode_reward}, headers=headers)
+        response = requests.post(endpoint, data={'score': int(model_score)}, headers=headers)
         if response.status_code == 201:
             model_data = response.json()
-            self.logger.info('Saving model with episode total reward {reward} to {directory}'.format(
-                reward=episode_reward, directory=self.parameter('UNI_MODEL_DIR')))
-            self._best_saved_episode_reward = episode_reward
+            self.logger.info('Saving model with score={reward} to {directory}'.format(
+                reward=model_score, directory=self.parameter('UNI_MODEL_DIR')))
+            self._best_last_saved_model_score = model_score
             self._model_was_saved = True
             self.algorithm.save(directory=self.parameter('UNI_MODEL_DIR'))
 
@@ -367,9 +374,9 @@ class UniRunner:
             else:
                 self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
         elif response.status_code == 204:
-            self._best_saved_episode_reward = episode_reward
+            self._best_last_saved_model_score = model_score
             self.logger.info(
-                'Skipping model save because there is already better model reward than %d' % episode_reward)
+                'Skipping model save because there is already better model score than %d' % model_score)
         else:
             self.logger.error('Problem with connecting to Uni API: %s %s' % (response, response.text))
 

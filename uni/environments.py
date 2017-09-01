@@ -9,7 +9,7 @@ class UniEnvironment(ParameterReaderMixin, metaclass=ABCMeta):
     PARAMETERS_CLEANERS = {}
 
     def __init__(self, runner):
-        self.PARAMETERS = self.read_parameters()
+        self.PARAMETERS.update(self.read_parameters())
         self.runner = runner
 
     @abstractmethod

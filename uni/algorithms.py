@@ -10,7 +10,7 @@ class UniAlgorithm(ParameterReaderMixin, metaclass=ABCMeta):
     PARAMETERS_CLEANERS = {}
 
     def __init__(self, runner, observation_space, action_space):
-        self.PARAMETERS = self.read_parameters()
+        self.PARAMETERS.update(self.read_parameters())
         self.runner = runner
         self.observation_space = observation_space
         self.action_space = action_space
