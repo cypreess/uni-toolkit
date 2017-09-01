@@ -31,12 +31,14 @@ class UniRunner:
         'CPU_NUMBER': 1,
         'EPISODES': 100,
         'MODEL_SAVE_BEST_LAST_MEAN': 100,
+        'MODEL_SAVE_FREQUENCY': 20,
     }
     PARAMETERS_OVERRIDDEN = {}
     PARAMETERS_CLEANERS = {
         'EPISODES': int,
         'CPU_NUMBER': int,
         'MODEL_SAVE_BEST_LAST_MEAN': int,
+        'MODEL_SAVE_FREQUENCY': int,
     }
 
     # Prepare runner object from shell arguments
@@ -146,8 +148,8 @@ class UniRunner:
         self._algorithm = None
         self.algorithm_path = algorithm or os.environ.get(self.ALGORITHM_VAR_NAME)
 
-        self._model_was_saved = False
         self._best_last_saved_model_score = None  # used for determining the last best saved model
+        self._last_episode_number_saved = 0
 
         self.render = render
 
@@ -303,8 +305,9 @@ class UniRunner:
 
             model_score = self.get_model_score(episodes_rewards)
 
-            if self.should_save_model(model_score):
-                self.model_save(model_score)
+            if self.should_save_model(model_score, episode):
+                self.model_save(model_score, episode)
+        self.logger.info("Training has finished successfully")
 
     def run_model(self):
         """
@@ -315,14 +318,14 @@ class UniRunner:
 
         episode = 0
 
-        while True:
+        while True:  # Episode loop
             episode += 1
             step = 0
             is_done = False
             observation = self.environment.reset()
             episode_reward = 0
 
-            while not is_done:
+            while not is_done:  # Step loop
                 step += 1
 
                 if self.render:
@@ -339,14 +342,15 @@ class UniRunner:
         """Dummy scoring; last N-th mean reward"""
         return round(np.mean(episodes_rewards[-self['MODEL_SAVE_BEST_LAST_MEAN']:]), 1)
 
-    def should_save_model(self, model_score):
+    def should_save_model(self, model_score, episode_number):
         """
         Make decision if model is good enough to be saved as intermediate outcome policy
         """
+        is_not_too_frequent = episode_number - self._last_episode_number_saved > self['MODEL_SAVE_FREQUENCY']
+        has_greater_score = self._best_last_saved_model_score is None or model_score > self._best_last_saved_model_score
+        return is_not_too_frequent and has_greater_score
 
-        return self._best_last_saved_model_score is None or model_score > self._best_last_saved_model_score
-
-    def model_save(self, model_score):
+    def model_save(self, model_score, episode_number):
         """
         Perform model save
         """
@@ -358,7 +362,7 @@ class UniRunner:
             self.logger.info('Saving model with score={reward} to {directory}'.format(
                 reward=model_score, directory=self.parameter('UNI_MODEL_DIR')))
             self._best_last_saved_model_score = model_score
-            self._model_was_saved = True
+            self._last_episode_number_saved = episode_number
             self.algorithm.save(directory=self.parameter('UNI_MODEL_DIR'))
 
             self.logger.info("Uploading model...")
