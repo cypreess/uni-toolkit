@@ -251,7 +251,29 @@ class UniRunner:
             if self.run_mode == 'run':
                 self.run_model()
             elif self.run_mode == 'train':
-                self.run_training()
+
+                try:
+                    self.run_training()
+                except Exception as e:
+                    self._call_uni_api(
+                        path='/runs/{run_pk}/instances/{id}/finish/'.format(
+                            run_pk=self['UNI_RUN_ID'],
+                            id=self['UNI_RIN_ID']
+                        ),
+                        verb='post',
+                        data={'failed': True}
+                    )
+                    raise e
+                else:
+                    self._call_uni_api(
+                        path='/runs/{run_pk}/instances/{id}/finish/'.format(
+                            run_pk=self['UNI_RUN_ID'],
+                            id=self['UNI_RIN_ID']
+                        ),
+                        verb='post',
+                        data={'failed': False}
+                    )
+
             elif self.run_mode == 'info':
                 self.run_info()
             else:
@@ -350,13 +372,17 @@ class UniRunner:
         has_greater_score = self._best_last_saved_model_score is None or model_score > self._best_last_saved_model_score
         return is_not_too_frequent and has_greater_score
 
+    def _call_uni_api(self, path, verb, data):
+        endpoint = urljoin(self['UNI_API_URL'], path)
+        headers = {'Authorization': 'token %s' % self['UNI_API_TOKEN']}
+        return getattr(requests, verb)(endpoint, data=data, headers=headers)
+
     def model_save(self, model_score, episode_number):
         """
         Perform model save
         """
-        endpoint = urljoin(self['UNI_API_URL'], '/runs/%s/models/' % self['UNI_RUN_ID'])
-        headers = {'Authorization': 'token %s' % self['UNI_API_TOKEN']}
-        response = requests.post(endpoint, data={'score': int(model_score)}, headers=headers)
+        response = self._call_uni_api(path='/runs/%s/models/' % self['UNI_RUN_ID'], verb='post',
+                                      data={'score': int(model_score)})
         if response.status_code == 201:
             model_data = response.json()
             self.logger.info('Saving model with score={reward} to {directory}'.format(
@@ -372,8 +398,9 @@ class UniRunner:
                 temp_archive.seek(0)
                 response = requests.put(model_data['upload_url'], data=temp_archive.read())
             if response.status_code == 200:
-                endpoint = urljoin(self['UNI_API_URL'], '/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']))
-                requests.patch(endpoint, data={'uploaded': True}, headers=headers)
+
+                self._call_uni_api(path='/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']),
+                                   verb='patch', data={'uploaded': True})
                 self.logger.info("Model successfully uploaded...")
             else:
                 self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
