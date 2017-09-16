@@ -1,7 +1,6 @@
 import importlib
 import inspect
 import json
-
 import os
 from pathlib import Path
 
@@ -15,6 +14,15 @@ def import_path(path):
     class_name = path.split('.')[-1]
     module = importlib.import_module('.'.join(module_path))
     return getattr(module, class_name)
+
+
+def str_choices(choices):
+    def _(value):
+        value = str(value)
+        assert value in choices, "Value %s not in %s" % (value, choices)
+        return value
+
+    return _
 
 
 def parse_boolean(value):

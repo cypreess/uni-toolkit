@@ -47,18 +47,21 @@ class OpenAiGymUniEnvironment(UniEnvironment):
         self._env = None
         super().__init__(runner)
 
+    def _create_gym_env(self, name):
+        import gym
+        return gym.make(name)
+
     @property
     def env(self):
         if self._env is None:
             import gym
-
             gym.undo_logger_setup()  # Get rid of gym logging
 
             # logger = logging.getLogger()
             # logger.addHandler(logging.StreamHandler(sys.stdout))
 
             self.pre_init_hook()
-            self._env = gym.make(self.OPEN_AI_GYM_ENV_NAME)
+            self._env = self._create_gym_env(self.OPEN_AI_GYM_ENV_NAME)
             if self.runner.run_mode == 'run' and not self.runner.render:
                 # We only run rendering to video in "run" mode (not training mode)
                 self._env = monitor.UniMonitor(self._env)

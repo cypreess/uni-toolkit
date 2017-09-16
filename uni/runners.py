@@ -63,6 +63,9 @@ class UniRunner:
                             action='append', required=False,
                             help='set specific parameter name')
 
+        parser.add_argument('-l', '--local', default=False, action='store_true',
+                            help='enable local run mode')
+
         parser.add_argument('-r', '--render', default=False, action='store_true',
                             help='enable environment rendering')
 
@@ -82,7 +85,7 @@ class UniRunner:
         args = parser.parse_args()
 
         return cls(environment=args.environment, algorithm=args.algorithm, run_mode=args.mode,
-                   parameters=dict(args.set), render=args.render)
+                   parameters=dict(args.set), render=args.render, local=args.local)
 
     # Set up propper logging rules
 
@@ -133,7 +136,7 @@ class UniRunner:
 
     # Runner object
 
-    def __init__(self, environment=None, algorithm=None, run_mode='train', parameters=None, render=False):
+    def __init__(self, environment=None, algorithm=None, run_mode='train', parameters=None, render=False, local=False):
         assert parameters is None or type(parameters) is dict, "parameters must be dict or None"
 
         if parameters is not None:
@@ -152,6 +155,7 @@ class UniRunner:
         self._last_episode_number_saved = 0
 
         self.render = render
+        self.local = local
 
     def parameter(self, name):
         """
@@ -255,24 +259,26 @@ class UniRunner:
                 try:
                     self.run_training()
                 except Exception as e:
-                    self._call_uni_api(
-                        path='/runs/{run_pk}/instances/{id}/finish/'.format(
-                            run_pk=self['UNI_RUN_ID'],
-                            id=self['UNI_RIN_ID']
-                        ),
-                        verb='post',
-                        data={'failed': True}
-                    )
+                    if not self.local:
+                        self._call_uni_api(
+                            path='/runs/{run_pk}/instances/{id}/finish/'.format(
+                                run_pk=self['UNI_RUN_ID'],
+                                id=self['UNI_RIN_ID']
+                            ),
+                            verb='post',
+                            data={'failed': True}
+                        )
                     raise e
                 else:
-                    self._call_uni_api(
-                        path='/runs/{run_pk}/instances/{id}/finish/'.format(
-                            run_pk=self['UNI_RUN_ID'],
-                            id=self['UNI_RIN_ID']
-                        ),
-                        verb='post',
-                        data={'failed': False}
-                    )
+                    if not self.local:
+                        self._call_uni_api(
+                            path='/runs/{run_pk}/instances/{id}/finish/'.format(
+                                run_pk=self['UNI_RUN_ID'],
+                                id=self['UNI_RIN_ID']
+                            ),
+                            verb='post',
+                            data={'failed': False}
+                        )
 
             elif self.run_mode == 'info':
                 self.run_info()
@@ -291,50 +297,28 @@ class UniRunner:
         """Prints custom string to be shown in visualisation window"""
         print(self.name)
 
-    def run_training(self, episodes=None, max_steps=None):
+    def run_training(self):
         """
-        Runs simulation in training mode which learn better policy
+        Runs algorithm training intercepting yield control whenever model evaluation should happen
+        to decide if we want to save the model.
         """
-        if episodes is None:
-            episodes = self.parameter('EPISODES')
 
-        if max_steps is None:
-            max_steps = self.parameter('MAX_STEPS')
+        self.logger.info("Running training...")
 
-        # self.environment #.prepare()
-        self.algorithm.prepare()
-
-        episodes_rewards = []
-
-        for episode in range(1, int(episodes) + 1):
-            self.logger.info('Running episode #%d' % episode)
-            episodes_rewards.append(0.0)
-            observation = self.environment.reset()
-            self.algorithm.pre_episode(episode)
-
-            for step in range(1, max_steps + 1):
-                action = self.algorithm.action_train(episode, step, observation)
-                new_observation, reward, is_done, debug = self.environment.step(action)
-                episodes_rewards[-1] += reward
-                self.algorithm.post_step(episode, step, action, observation, new_observation, reward, is_done, debug)
-                observation = new_observation
-
-                if is_done:
-                    self.logger.info('Episode #%d is done' % episode)
-                    break
-
-            self.algorithm.post_episode(episode)
-
+        for episodes_rewards in self.algorithm.train():
             model_score = self.get_model_score(episodes_rewards)
+            episode = len(episodes_rewards)
 
             if self.should_save_model(model_score, episode):
                 self.model_save(model_score, episode)
+
         self.logger.info("Training has finished successfully")
 
     def run_model(self):
         """
         Runs simulation in demo mode which just reads built before model and use it
         """
+        self.logger.info("Running model...")
 
         self.algorithm.load(directory=self.parameter('UNI_MODEL_DIR'))
 
@@ -381,35 +365,38 @@ class UniRunner:
         """
         Perform model save
         """
-        response = self._call_uni_api(path='/runs/%s/models/' % self['UNI_RUN_ID'], verb='post',
-                                      data={'score': int(model_score)})
-        if response.status_code == 201:
-            model_data = response.json()
-            self.logger.info('Saving model with score={reward} to {directory}'.format(
-                reward=model_score, directory=self.parameter('UNI_MODEL_DIR')))
-            self._best_last_saved_model_score = model_score
-            self._last_episode_number_saved = episode_number
-            self.algorithm.save(directory=self.parameter('UNI_MODEL_DIR'))
 
-            self.logger.info("Uploading model...")
-            with tempfile.TemporaryFile() as temp_archive:
-                with tarfile.open(fileobj=temp_archive, mode="w:gz") as temp_tar_archive:
-                    temp_tar_archive.add(self['UNI_MODEL_DIR'], arcname='')
-                temp_archive.seek(0)
-                response = requests.put(model_data['upload_url'], data=temp_archive.read())
-            if response.status_code == 200:
+        self.logger.info('Saving model with score={reward} to {directory}'.format(
+            reward=model_score, directory=self.parameter('UNI_MODEL_DIR')))
 
-                self._call_uni_api(path='/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']),
-                                   verb='patch', data={'uploaded': True})
-                self.logger.info("Model successfully uploaded...")
+        self.algorithm.save(directory=self.parameter('UNI_MODEL_DIR'))
+
+        if not self.local:
+            response = self._call_uni_api(path='/runs/%s/models/' % self['UNI_RUN_ID'], verb='post',
+                                          data={'score': int(model_score)})
+            if response.status_code == 201:
+                model_data = response.json()
+                self._best_last_saved_model_score = model_score
+                self._last_episode_number_saved = episode_number
+                self.logger.info("Uploading model...")
+                with tempfile.TemporaryFile() as temp_archive:
+                    with tarfile.open(fileobj=temp_archive, mode="w:gz") as temp_tar_archive:
+                        temp_tar_archive.add(self['UNI_MODEL_DIR'], arcname='')
+                    temp_archive.seek(0)
+                    response = requests.put(model_data['upload_url'], data=temp_archive.read())
+                if response.status_code == 200:
+
+                    self._call_uni_api(path='/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']),
+                                       verb='patch', data={'uploaded': True})
+                    self.logger.info("Model successfully uploaded...")
+                else:
+                    self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
+            elif response.status_code == 204:
+                self._best_last_saved_model_score = model_score
+                self.logger.info(
+                    'Skipping model upload because there is already better model score than %d' % model_score)
             else:
-                self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
-        elif response.status_code == 204:
-            self._best_last_saved_model_score = model_score
-            self.logger.info(
-                'Skipping model save because there is already better model score than %d' % model_score)
-        else:
-            self.logger.error('Problem with connecting to Uni API: %s %s' % (response, response.text))
+                self.logger.error('Problem with connecting to Uni API: %s %s' % (response, response.text))
 
     def __getitem__(self, item):
         return self.parameter(item)
