@@ -371,13 +371,14 @@ class UniRunner:
 
         self.algorithm.save(directory=self.parameter('UNI_MODEL_DIR'))
 
+        self._best_last_saved_model_score = model_score
+        self._last_episode_number_saved = episode_number
+
         if not self.local:
             response = self._call_uni_api(path='/runs/%s/models/' % self['UNI_RUN_ID'], verb='post',
                                           data={'score': int(model_score)})
             if response.status_code == 201:
                 model_data = response.json()
-                self._best_last_saved_model_score = model_score
-                self._last_episode_number_saved = episode_number
                 self.logger.info("Uploading model...")
                 with tempfile.TemporaryFile() as temp_archive:
                     with tarfile.open(fileobj=temp_archive, mode="w:gz") as temp_tar_archive:
@@ -392,7 +393,6 @@ class UniRunner:
                 else:
                     self.logger.warning("Error while uploading model: %s %s" % (response, response.text))
             elif response.status_code == 204:
-                self._best_last_saved_model_score = model_score
                 self.logger.info(
                     'Skipping model upload because there is already better model score than %d' % model_score)
             else:
