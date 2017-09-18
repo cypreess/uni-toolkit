@@ -251,7 +251,6 @@ class UniRunner:
         Runs whole machinery with regards to the mode that runner was created in.
         """
         try:
-            self.logger.info('Starting {name} in {mode} mode...'.format(name=self.name, mode=self.run_mode))
             if self.run_mode == 'run':
                 self.run_model()
             elif self.run_mode == 'train':
