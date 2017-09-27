@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import logging
 import os
 import sys
@@ -154,6 +155,9 @@ class UniRunner:
         self._best_last_saved_model_score = None  # used for determining the last best saved model
         self._last_episode_number_saved = 0
 
+        self._last_update_episode_time = None
+        self._last_update_episode = None
+
         self.render = render
         self.local = local
 
@@ -308,8 +312,12 @@ class UniRunner:
             model_score = self.get_model_score(episodes_rewards)
             episode = len(episodes_rewards)
 
+            print('@metric score %d %f' % (len(episodes_rewards), model_score))
+
             if self.should_save_model(model_score, episode):
                 self.model_save(model_score, episode)
+
+            self.update_episode_count(len(episodes_rewards))
 
         self.logger.info("Training has finished successfully")
 
@@ -399,3 +407,21 @@ class UniRunner:
 
     def __getitem__(self, item):
         return self.parameter(item)
+
+    def update_episode_count(self, episodes):
+        """Updates API with the fact that episodes number has changed; Be graceful for API server"""
+        assert type(episodes) is int
+
+        # Do not send anything to API if in 'local' run mode
+        if not self.local:
+
+            # Send anything if it is the first time or wait 10s between two api calls
+            if self._last_update_episode_time is None \
+                    or datetime.datetime.now() - self._last_update_episode_time > datetime.timedelta(
+                        seconds=10):
+                # Update only if the value changed indeed
+                if self._last_update_episode != episodes:
+                    self._last_update_episode = episodes
+                    self._last_update_episode_time = datetime.datetime.now()
+                    response = self._call_uni_api(path='/runs/%s/instances/%s/' % (self['UNI_RUN_ID'], self['UNI_RIN_ID']),
+                                       verb='patch', data={'episodes': int(episodes)})
