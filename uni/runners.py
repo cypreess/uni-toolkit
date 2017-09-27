@@ -319,6 +319,10 @@ class UniRunner:
 
             self.update_episode_count(len(episodes_rewards))
 
+        self.update_episode_count(len(episodes_rewards), force=True)
+        self.model_save(model_score, episode)
+
+
         self.logger.info("Training has finished successfully")
 
     def run_model(self):
@@ -408,20 +412,19 @@ class UniRunner:
     def __getitem__(self, item):
         return self.parameter(item)
 
-    def update_episode_count(self, episodes):
+    def update_episode_count(self, episodes, force=False):
         """Updates API with the fact that episodes number has changed; Be graceful for API server"""
         assert type(episodes) is int
 
         # Do not send anything to API if in 'local' run mode
         if not self.local:
-
             # Send anything if it is the first time or wait 10s between two api calls
-            if self._last_update_episode_time is None \
+            if force or self._last_update_episode_time is None \
                     or datetime.datetime.now() - self._last_update_episode_time > datetime.timedelta(
-                        seconds=10):
+                        seconds=5):
                 # Update only if the value changed indeed
                 if self._last_update_episode != episodes:
                     self._last_update_episode = episodes
                     self._last_update_episode_time = datetime.datetime.now()
-                    response = self._call_uni_api(path='/runs/%s/instances/%s/' % (self['UNI_RUN_ID'], self['UNI_RIN_ID']),
+                    self._call_uni_api(path='/runs/%s/instances/%s/' % (self['UNI_RUN_ID'], self['UNI_RIN_ID']),
                                        verb='patch', data={'episodes': int(episodes)})
