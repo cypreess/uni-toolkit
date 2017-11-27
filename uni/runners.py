@@ -312,7 +312,8 @@ class UniRunner:
             model_score = self.get_model_score(episodes_rewards)
             episode = len(episodes_rewards)
 
-            print('@metric score %d %f' % (len(episodes_rewards), model_score))
+            if len(episodes_rewards) % 1000 == 0:
+                print('@metric score %d %f' % (len(episodes_rewards), model_score))
 
             if self.should_save_model(model_score, episode):
                 self.model_save(model_score, episode)
