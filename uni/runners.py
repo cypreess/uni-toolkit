@@ -388,7 +388,7 @@ class UniRunner:
 
         if not self.local:
             response = self._call_uni_api(path='/runs/%s/models/' % self['UNI_RUN_ID'], verb='post',
-                                          data={'score': int(model_score)})
+                                          data={'score': float(model_score)})
             if response.status_code == 201:
                 model_data = response.json()
                 self.logger.info("Uploading model...")
