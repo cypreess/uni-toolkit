@@ -1,5 +1,4 @@
 import argparse
-import datetime
 import logging
 import os
 import sys
@@ -7,6 +6,7 @@ import tarfile
 import tempfile
 from urllib.parse import urljoin
 
+import datetime
 import numpy as np
 import requests
 
@@ -264,7 +264,9 @@ class UniRunner:
                 except Exception as e:
                     if not self.local:
                         self._call_uni_api(
-                            path='/runs/{run_pk}/instances/{id}/finish/'.format(
+                            path='/organizations/{organization_pk}/projects/{project_pk}/runs/{run_pk}/instances/{id}/finish/'.format(
+                                organization_pk=self['UNI_ORGANIZATION_ID'],
+                                project_pk=self['UNI_PROJECT_ID'],
                                 run_pk=self['UNI_RUN_ID'],
                                 id=self['UNI_RIN_ID']
                             ),
@@ -275,7 +277,9 @@ class UniRunner:
                 else:
                     if not self.local:
                         self._call_uni_api(
-                            path='/runs/{run_pk}/instances/{id}/finish/'.format(
+                            path='/organizations/{organization_pk}/projects/{project_pk}/runs/{run_pk}/instances/{id}/finish/'.format(
+                                organization_pk=self['UNI_ORGANIZATION_ID'],
+                                project_pk=self['UNI_PROJECT_ID'],
                                 run_pk=self['UNI_RUN_ID'],
                                 id=self['UNI_RIN_ID']
                             ),
@@ -322,7 +326,6 @@ class UniRunner:
 
         self.update_episode_count(len(episodes_rewards), force=True)
         self.model_save(model_score, episode)
-
 
         self.logger.info("Training has finished successfully")
 
@@ -387,7 +390,8 @@ class UniRunner:
         self._last_episode_number_saved = episode_number
 
         if not self.local:
-            response = self._call_uni_api(path='/runs/%s/models/' % self['UNI_RUN_ID'], verb='post',
+            response = self._call_uni_api(path='/organizations/%s/projects/%s/runs/%s/models/' % (
+            self['UNI_ORGANIZATION_ID'], self['UNI_PROJECT_ID'], self['UNI_RUN_ID']), verb='post',
                                           data={'score': float(model_score)})
             if response.status_code == 201:
                 model_data = response.json()
@@ -399,7 +403,8 @@ class UniRunner:
                     response = requests.put(model_data['upload_url'], data=temp_archive.read())
                 if response.status_code == 200:
 
-                    self._call_uni_api(path='/runs/%s/models/%s/' % (self['UNI_RUN_ID'], model_data['id']),
+                    self._call_uni_api(path='/organizations/%s/projects/%s/runs/%s/models/%s/' % (
+                    self['UNI_ORGANIZATION_ID'], self['UNI_PROJECT_ID'], self['UNI_RUN_ID'], model_data['id']),
                                        verb='patch', data={'uploaded': True})
                     self.logger.info("Model successfully uploaded...")
                 else:
@@ -422,10 +427,11 @@ class UniRunner:
             # Send anything if it is the first time or wait 10s between two api calls
             if force or self._last_update_episode_time is None \
                     or datetime.datetime.now() - self._last_update_episode_time > datetime.timedelta(
-                        seconds=5):
+                seconds=5):
                 # Update only if the value changed indeed
                 if self._last_update_episode != episodes:
                     self._last_update_episode = episodes
                     self._last_update_episode_time = datetime.datetime.now()
-                    self._call_uni_api(path='/runs/%s/instances/%s/' % (self['UNI_RUN_ID'], self['UNI_RIN_ID']),
+                    self._call_uni_api(path='/organizations/%s/projects/%s/runs/%s/instances/%s/' % (
+                        self['UNI_ORGANIZATION_ID'], self['UNI_PROJECT_ID'], self['UNI_RUN_ID'], self['UNI_RIN_ID']),
                                        verb='patch', data={'episodes': int(episodes)})
